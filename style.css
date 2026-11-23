@@ -216,3 +216,31 @@ body {
 @media(prefers-reduced-motion:reduce) {
   .pour .candy-fill { animation:none; }
 }
+
+.science-video-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+.science-video-card .science-copy {
+  padding: clamp(14px, 2.4vw, 26px);
+}
+.science-video-card video {
+  display: block;
+  width: 100%;
+  max-height: min(57vh, 560px);
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #1c142a;
+}
+.science-notes {
+  margin-block-start: 14px;
+}
+.science-notes summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--station-color);
+  font-weight: 650;
+}
+.science-notes p {
+  margin-block-start: 9px;
+}

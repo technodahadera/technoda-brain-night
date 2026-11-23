@@ -1,4 +1,4 @@
-import {rounds} from './data.js?v=3';
+import {rounds} from './data.js?v=4';
 import {drawShapes, playSound, stopSound} from './media.js';
 import {hostTransport, joinTransport, normalizeCode} from './live.js?v=2';
 
@@ -91,10 +91,21 @@ function visual(index, reveal = false) {
 }
 
 function research(round, index) {
+  const source = `<a href="${round.link}" target="_blank" rel="noopener noreferrer"><bdi>${round.ref}</bdi> ↗</a>`;
+  if (round.scienceVideo) {
+    return `<section class="science-card science-video-card" aria-labelledby="science-title">
+      <div class="science-copy">
+        <p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
+        <h2 id="science-title">${round.scienceTitle}</h2>
+        <video controls playsinline preload="metadata" aria-labelledby="science-title" src="${round.scienceVideo}"></video>
+        <details class="science-notes"><summary>תקציר ומקור המחקר</summary><p>${round.science}</p>${source}</details>
+      </div>
+    </section>`;
+  }
   return `<section class="science-card" aria-labelledby="science-title">
     <div class="science-copy"><p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
       <h2 id="science-title">${round.scienceTitle}</h2><p>${round.science}</p>
-      <a href="${round.link}" target="_blank" rel="noopener noreferrer"><bdi>${round.ref}</bdi> ↗</a>
+      ${source}
     </div>${stationArt(index,'science-art')}
   </section>`;
 }
