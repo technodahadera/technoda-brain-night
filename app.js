@@ -110,6 +110,7 @@ if (!view) {
 
 function presenter() {
   let index = 0, phase = 'vote', openedAt = Date.now(), deadline = 0;
+  let voteWindow = openedAt;
   const ballots = new Map();
   let networkMessage = 'פותחים חדר…';
   let room = '';
@@ -118,7 +119,7 @@ function presenter() {
   let autoTimer;
   let simulate = false;
 
-  const snapshot = () => ({round:index, phase, openedAt, deadline});
+  const snapshot = () => ({round:index, phase, openedAt, deadline, voteWindow});
   const transport = hostTransport((message, nextRoom) => {
     networkMessage = message;
     if (room !== nextRoom) {
@@ -134,15 +135,17 @@ function presenter() {
   }, receiveVote, snapshot);
 
   function receiveVote(data) {
-    if (simulate || phase !== 'vote' || (deadline && Date.now() > deadline) || data.round !== index || data.openedAt !== openedAt) return false;
+    if (simulate || data.round !== index || data.openedAt !== voteWindow) return false;
     if (typeof data.voter !== 'string' || !/^[a-f0-9-]{36}$/.test(data.voter)) return false;
     if (!Number.isInteger(data.choice) || data.choice < 0 || data.choice >= rounds[index].options.length) return false;
     const existing = ballots.get(data.voter);
     if (existing) return existing.choice === data.choice;
-    const ms = Math.max(0, Date.now() - openedAt);
+    const ms = Number.isFinite(data.elapsed) ? Math.max(0,data.elapsed) : 0;
     ballots.set(data.voter,{choice:data.choice,ms});
     count = ballots.size;
     updateStats();
+    const results = app.querySelector('[data-results]');
+    if (results) results.innerHTML=graph(rounds[index]);
     return true;
   }
   function updateStats() {
@@ -158,9 +161,11 @@ function presenter() {
       ballots.clear();
       count = 0;
     }
+    if (nextIndex !== index) voteWindow = 0;
     index = nextIndex;
     phase = nextPhase;
-    openedAt = Date.now();
+    openedAt = Math.max(Date.now(),openedAt+1);
+    if (phase === 'vote') voteWindow = openedAt;
     const round = rounds[index];
     const seconds = nextPhase === 'task' ? round?.seconds : nextPhase === 'vote' ? round?.voteSeconds : 0;
     deadline = seconds ? openedAt + seconds * 1000 : 0;
@@ -200,7 +205,7 @@ function presenter() {
         else stage += '<span class="count" data-count></span>';
       } else if (phase === 'reveal') {
         if (round.answer) stage += `<p class="result">${round.answer}</p>${visual(index,true)}`;
-        stage += graph(round);
+        stage += `<section data-results>${graph(round)}</section>`;
       } else {
         stage += research(round);
         if (index === 0) stage = `<div class="stage-finish"><div>${stage}</div><img src="./assets/hero.webp" alt=""></div>`;
@@ -369,7 +374,7 @@ function participant() {
         message='לא התקבל אישור. אפשר לנסות שוב.';
         hasError=true;
         render();
-      },4500);
+      },5600);
     }
     render();
   });
