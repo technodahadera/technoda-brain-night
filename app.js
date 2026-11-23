@@ -1,4 +1,4 @@
-import {rounds} from './data.js?v=7';
+import {rounds} from './data.js?v=8';
 import {drawShapes, playSound, stopSound} from './media.js';
 import {hostTransport, joinTransport, normalizeCode} from './live.js?v=5';
 
