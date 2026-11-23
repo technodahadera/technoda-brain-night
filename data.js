@@ -15,6 +15,7 @@ export const rounds = [
     question: 'מה קרה כשניסיתם לומר את צבע הדיו?',
     options: ['המילה הכתובה קפצה לנו לפה', 'בלמנו ברגע האחרון', 'הלך לנו חלק'],
     answer: 'אם יצא לכם להגיד ״אדום״ במקום ״ירוק״, נפלתם במלכודת הסטרופ.',
+    scienceVideo: './assets/stroop-science.mp4',
     scienceTitle: 'כשהמילה קופצת לפני הצבע',
     science: 'במחקר עם ילדים בני 6–11, ילדים מחוננים עשו בממוצע פחות טעויות במבחן הסטרופ. ההבדל תלוי בסוג האתגר. גם כשקוראים מצוין, לעצור את הקריאה ולומר את צבע הדיו דורש שליטה בקשב.',
     articleTitle: 'Development of Mental Attention in Gifted and Mainstream Children: The Role of Mental Capacity, Inhibition, and Speed of Processing',
