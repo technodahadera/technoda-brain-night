@@ -22,7 +22,7 @@ function posting(room, suffix, payload, hostKey) {
   if (hostKey) headers['X-Host-Key'] = hostKey;
   return request(roomURL(room,suffix),{method:'POST',headers,body:JSON.stringify(payload)});
 }
-export function hostTransport(onStatus, onVote, snapshot) {
+export function hostTransport(onStatus, onVote, snapshot, onResultsClosed) {
   const secret = crypto.randomUUID();
   let code = randomCode();
   let ready = false;
@@ -40,7 +40,7 @@ export function hostTransport(onStatus, onVote, snapshot) {
     if (busy) return;
     busy=true;
     const current = snapshot();
-    const {round,phase,openedAt,deadline,voteWindow} = current;
+    const {round,phase,openedAt,deadline,voteWindow,pendingResults} = current;
     const payload = {round,phase,openedAt,deadline};
     try {
       if (!ready) {
@@ -53,10 +53,11 @@ export function hostTransport(onStatus, onVote, snapshot) {
         sent=openedAt;
       }
       status('מוכן לקבל משפחות');
-      if (voteWindow && phase!=='science') {
-        const votes=await request(roomURL(code,`/results?round=${round}&openedAt=${voteWindow}`),{headers:{'X-Host-Key':secret}});
-        votes.forEach(v => onVote({...v,round,openedAt:voteWindow}));
+      for (const [window, resultRound] of pendingResults) {
+        await readVotes(resultRound, window);
+        onResultsClosed(window);
       }
+      if (voteWindow) await readVotes(round, voteWindow);
     } catch (error) {
       if (!ready && error.status===409) {
         code=randomCode();
@@ -72,6 +73,10 @@ export function hostTransport(onStatus, onVote, snapshot) {
       const changed=snapshot().openedAt!==openedAt;
       timer=setTimeout(sync, changed ? 0 : 1150);
     }
+  }
+  async function readVotes(round, openedAt) {
+    const votes = await request(roomURL(code,`/results?round=${round}&openedAt=${openedAt}`),{headers:{'X-Host-Key':secret}});
+    votes.forEach(v => onVote({...v, round, openedAt}));
   }
   queueMicrotask(sync);
   return {broadcast:sync};

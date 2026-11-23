@@ -1,6 +1,6 @@
 import {rounds} from './data.js?v=4';
 import {drawShapes, playSound, stopSound} from './media.js';
-import {hostTransport, joinTransport, normalizeCode} from './live.js?v=2';
+import {hostTransport, joinTransport, normalizeCode} from './live.js?v=5';
 
 const app = document.querySelector('#app');
 const query = new URLSearchParams(location.search);
@@ -129,7 +129,12 @@ if (!view) {
 function presenter() {
   let index = 0, phase = 'vote', openedAt = Date.now(), deadline = 0;
   let voteWindow = openedAt;
-  const ballots = new Map();
+  const roundsByWindow = new Map();
+  const completed = new Map();
+  const pendingResults = new Map();
+  let review;
+  let ballots = new Map();
+  roundsByWindow.set(voteWindow, {index, ballots});
   let networkMessage = 'פותחים חדר…';
   let room = '';
   let qr = '';
@@ -138,7 +143,10 @@ function presenter() {
   let autoTimer;
   let simulate = false;
 
-  const snapshot = () => ({round:index, phase, openedAt, deadline, voteWindow});
+  const snapshot = () => ({round:index, phase, openedAt, deadline,
+    voteWindow: phase === 'vote' && !simulate ? voteWindow : 0,
+    pendingResults: [...pendingResults],
+  });
   const transport = hostTransport((message, nextRoom) => {
     networkMessage = message;
     if (room !== nextRoom) {
@@ -151,26 +159,30 @@ function presenter() {
       }
       render();
     } else updateStats();
-  }, receiveVote, snapshot);
+  }, receiveVote, snapshot, window => pendingResults.delete(window));
 
   function receiveVote(data) {
-    if (simulate || data.round !== index || data.openedAt !== voteWindow) return false;
-    if (typeof data.voter !== 'string' || !/^[a-f0-9-]{36}$/.test(data.voter)) return false;
-    if (!Number.isInteger(data.choice) || data.choice < 0 || data.choice >= rounds[index].options.length) return false;
-    const existing = ballots.get(data.voter);
-    if (existing) return existing.choice === data.choice;
+    const result = roundsByWindow.get(data.openedAt);
+    if (!result || result.index !== data.round || result.practice) return;
+    if (typeof data.voter !== 'string' || !/^[a-f0-9-]{36}$/.test(data.voter)) return;
+    if (!Number.isInteger(data.choice) || data.choice < 0 || data.choice >= rounds[data.round].options.length) return;
+    if (result.ballots.has(data.voter)) return;
     const ms = Number.isFinite(data.elapsed) ? Math.max(0,data.elapsed) : 0;
-    ballots.set(data.voter,{choice:data.choice,ms});
-    count = ballots.size;
-    updateStats();
+    result.ballots.set(data.voter,{choice:data.choice,ms});
+    if (result.ballots === ballots) {
+      count = ballots.size;
+      updateStats();
+    }
     const results = app.querySelector('[data-results]');
     if (results && !resultsFrame) {
       resultsFrame = requestAnimationFrame(() => {
         resultsFrame = undefined;
-        if (results.isConnected) results.innerHTML = graph(rounds[index], false);
+        if (results.isConnected) {
+          const shown = review?.index ?? index;
+          results.innerHTML = graph(shown, review ? completed.get(shown) : ballots, false);
+        }
       });
     }
-    return true;
   }
   function updateStats() {
     const marker = app.querySelector('[data-count]');
@@ -179,17 +191,24 @@ function presenter() {
     if (status) status.textContent = simulate ? 'מצב תרגול' : networkMessage;
   }
   function change(nextIndex, nextPhase) {
+    if (phase === 'vote' && (nextPhase !== 'vote' || nextIndex !== index)) {
+      completed.set(index, ballots);
+      if (!simulate) pendingResults.set(voteWindow, index);
+    }
     cancelSound();
     clearTimeout(autoTimer);
     if (nextIndex !== index || nextPhase === 'vote') {
-      ballots.clear();
+      ballots = new Map();
       count = 0;
     }
     if (nextIndex !== index) voteWindow = 0;
     index = nextIndex;
     phase = nextPhase;
     openedAt = Math.max(Date.now(),openedAt+1);
-    if (phase === 'vote') voteWindow = openedAt;
+    if (phase === 'vote') {
+      voteWindow = openedAt;
+      roundsByWindow.set(voteWindow, {index, ballots, practice: simulate});
+    }
     const round = rounds[index];
     const seconds = nextPhase === 'task' ? round?.seconds : nextPhase === 'vote' ? round?.voteSeconds : 0;
     deadline = seconds ? openedAt + seconds * 1000 : 0;
@@ -203,7 +222,9 @@ function presenter() {
       autoTimer = setTimeout(beginVote, index === 6 ? 100 : 430);
     }
   };
-  function graph(round, animate = true) {
+  function graph(index, ballots, animate = true) {
+    const round = rounds[index];
+    const count = ballots.size;
     if (!count) return '<p class="status">עדיין אין הצבעות לתחנה הזו.</p>';
     const counts = Array(round.options.length).fill(0);
     let reaction = 0;
@@ -230,7 +251,8 @@ function presenter() {
       ${index === 6 ? `<p class="status">זמן ממוצע מקבלת השאלה ועד ההצבעה באולם <bdi>${Math.round(reaction/count).toLocaleString('he-IL')}</bdi> אלפיות שנייה.</p>` : ''}
     </div>`;
   }
-  function render() {
+  function render(shownIndex = review?.index ?? index, shownPhase = review?.phase ?? phase) {
+    const index = shownIndex, phase = shownPhase;
     const round = rounds[index];
     let stage;
     if (!round) {
@@ -246,16 +268,19 @@ function presenter() {
         else stage += '<span class="count" data-count></span>';
       } else if (phase === 'reveal') {
         if (round.answer) stage += `<p class="result">${round.answer}</p>${visual(index,true)}`;
-        stage += `<section data-results>${graph(round)}</section>`;
+        stage += `<section data-results>${graph(index, review ? completed.get(index) : ballots)}</section>`;
       } else {
         stage += research(round,index);
       }
     }
-    const step = !round ? '' : phase === 'task' ? makeButton('advance','פותחים הצבעה ←','primary')
+    const step = review
+      ? makeButton('review-toggle', phase === 'science' ? 'תוצאות ההצבעה' : 'מה המדע אומר?', 'secondary')
+        + makeButton('resume', 'חזרה לשלב הנוכחי', 'primary')
+      : !round ? ''  : phase === 'task' ? makeButton('advance','פותחים הצבעה ←','primary')
       : phase === 'vote' ? makeButton('advance','חושפים תוצאות ←','primary')
       : phase === 'reveal' ? makeButton('advance','מה המדע אומר? ←','primary')
       : makeButton('advance',index===7?'לסיום הערב ←':'לתחנה הבאה ←','primary');
-    app.innerHTML = `<div class="room-wrap"><section class="stage stage-${round ? phase : 'finish'} ${round?.color||'lilac'}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מצב הקרנה','quiet')}${phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && count>0)}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
+    app.innerHTML = `<div class="room-wrap"><section class="stage stage-${round ? phase : 'finish'} ${round?.color||'lilac'}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${!review && phase==='science' && completed.has(index) ? makeButton('review-current','תוצאות ההצבעה','secondary') : ''}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מצב הקרנה','quiet')}${!review && phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${!review ? makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && (count>0 || completed.size>0)) : ''}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" class="${completed.has(i) ? 'completed-round' : ''}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}${completed.has(i) ? ' <span aria-hidden="true">✓</span>' : ''}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
     drawShapes(app, phase==='reveal');
     updateTimer();
     updateStats();
@@ -266,7 +291,39 @@ function presenter() {
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const [action, value] = button.dataset.action.split(':');
-    if (action==='round') goTo(Number(value));
+    if (action === 'round') {
+      const target = Number(value);
+      if (completed.has(target)) {
+        cancelSound();
+        review = {index:target, phase:'reveal'};
+        render();
+        app.querySelector('[data-action="review-toggle"]')?.focus({preventScroll:true});
+      } else if (target === index) {
+        cancelSound();
+        review = undefined;
+        render();
+      } else {
+        review = undefined;
+        goTo(target);
+      }
+    }
+    if (action === 'review-current') {
+      review = {index, phase:'reveal'};
+      render();
+      app.querySelector('[data-action="review-toggle"]')?.focus({preventScroll:true});
+    }
+    if (action === 'review-toggle' && review) {
+      cancelSound();
+      review.phase = review.phase === 'science' ? 'reveal' : 'science';
+      render();
+      app.querySelector('[data-action="review-toggle"]')?.focus({preventScroll:true});
+    }
+    if (action === 'resume') {
+      cancelSound();
+      review = undefined;
+      render();
+      app.querySelector('[data-action="advance"]')?.focus({preventScroll:true});
+    }
     if (action==='sound') await toggleSound(value);
     if (action==='advance') {
       if (phase==='task') beginVote();
@@ -297,8 +354,17 @@ function presenter() {
       document.body.classList.toggle('screen-only',Boolean(document.fullscreenElement));
     }
     if (action==='simulation') {
-      if (simulate) { simulate = false; goTo(0); }
-      else if (!count) { simulate = true; render(); }
+      if (simulate) {
+        goTo(0);
+        completed.clear();
+        simulate = false;
+        roundsByWindow.get(voteWindow).practice = false;
+        render();
+      } else if (!count && !completed.size) {
+        simulate = true;
+        if (voteWindow) roundsByWindow.get(voteWindow).practice = true;
+        render();
+      }
     }
     if (action==='sample' && simulate && phase==='vote') {
       const options = rounds[index].options.length;
@@ -426,6 +492,7 @@ function demo() {
   const chosen = Number(query.get('round'));
   let index = Number.isInteger(chosen) && chosen >= 0 && chosen < finished ? chosen : 0;
   let selected;
+  const answers = new Map();
   let timerFor = -1;
   function render() {
     const round=rounds[index];
@@ -450,10 +517,13 @@ function demo() {
     const [action,value] = b.dataset.action.split(':');
     if (action==='sound') { await toggleSound(value); return; }
     cancelSound();
-    if (action==='vote') selected=Number(value);
+    if (action==='vote') {
+      selected=Number(value);
+      answers.set(index, selected);
+    }
     if (action==='next' || action==='previous') {
       index+=action==='next'?1:-1;
-      selected=undefined;
+      selected=answers.get(index);
       timerFor=-1;
       window.scrollTo(0,0);
     }

@@ -244,3 +244,10 @@ body {
 .science-notes p {
   margin-block-start: 9px;
 }
+
+.mini-nav .completed-round {
+  border-color: #76b89d;
+}
+.completed-round span {
+  color: #136b58;
+}
