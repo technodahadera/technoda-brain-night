@@ -1,4 +1,4 @@
-import {rounds} from './data.js';
+import {rounds} from './data.js?v=3';
 import {drawShapes, playSound, stopSound} from './media.js';
 import {hostTransport, joinTransport, normalizeCode} from './live.js?v=2';
 
@@ -9,6 +9,8 @@ const letters = ['א','ב','ג','ד'];
 const modes = new Set(['task','vote','reveal','science']);
 const finished = rounds.length;
 const badge = (round, index) => `<div class="room-icon ${round.color}" aria-hidden="true">${round.icon}</div><p class="phase-label">${index ? `תחנה ${index} מתוך 7` : 'מתחילים בחימום'}</p>`;
+const stationArt = (index, className) =>
+  `<img class="${className}" src="./assets/station-${index}.webp" alt="" decoding="async">`;
 const makeButton = (action, text, style = 'secondary', disabled = false) => `<button type="button" class="${style}" data-action="${action}" ${disabled ? 'disabled' : ''}>${text}</button>`;
 const progress = index => `<div class="round-progress" role="img" aria-label="שלב ${index+1} מתוך 8">${rounds.map((_,i) => `<i class="${i<index?'done':i===index?'now':''}"></i>`).join('')}</div>`;
 const footerArt = '<img src="./assets/hero.webp" alt="" class="tiny-art">';
@@ -88,8 +90,13 @@ function visual(index, reveal = false) {
   return '';
 }
 
-function research(round) {
-  return `<div class="explanation"><p>${round.science}</p><a href="${round.link}" target="_blank" rel="noopener noreferrer">${round.ref} ↗</a></div>`;
+function research(round, index) {
+  return `<section class="science-card" aria-labelledby="science-title">
+    <div class="science-copy"><p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
+      <h2 id="science-title">${round.scienceTitle}</h2><p>${round.science}</p>
+      <a href="${round.link}" target="_blank" rel="noopener noreferrer"><bdi>${round.ref}</bdi> ↗</a>
+    </div>${stationArt(index,'science-art')}
+  </section>`;
 }
 function voteButtons(round, selected, disabled, reveal = false) {
   return `<div class="options">${round.options.map((text,i) => `<button type="button" class="choice ${selected===i?'selected':''} ${reveal&&round.correct===i?'correct':''}" data-action="vote:${i}" aria-pressed="${selected===i}" ${disabled?'disabled':''}><span class="letter" aria-hidden="true">${letters[i]}</span><span>${text}</span></button>`).join('')}</div>`;
@@ -97,7 +104,7 @@ function voteButtons(round, selected, disabled, reveal = false) {
 
 if (!view) {
   document.querySelector('#station-list').innerHTML = rounds.slice(1).map((round,i) =>
-    `<a href="?view=demo&amp;round=${i+1}" class="station-card ${round.color}"><span class="icon" aria-hidden="true">${round.icon}</span><strong>${round.title}</strong><small>${round.card}</small></a>`).join('');
+    `<a href="?view=demo&amp;round=${i+1}" class="station-card ${round.color}">${stationArt(i+1,'station-card-art')}<div class="station-card-copy"><strong>${round.title}</strong><small>${round.card}</small></div></a>`).join('');
 } else {
   const mode = document.querySelector('#mode-link');
   mode.href = './';
@@ -116,6 +123,7 @@ function presenter() {
   let room = '';
   let qr = '';
   let count = 0;
+  let resultsFrame;
   let autoTimer;
   let simulate = false;
 
@@ -145,12 +153,17 @@ function presenter() {
     count = ballots.size;
     updateStats();
     const results = app.querySelector('[data-results]');
-    if (results) results.innerHTML=graph(rounds[index]);
+    if (results && !resultsFrame) {
+      resultsFrame = requestAnimationFrame(() => {
+        resultsFrame = undefined;
+        if (results.isConnected) results.innerHTML = graph(rounds[index], false);
+      });
+    }
     return true;
   }
   function updateStats() {
     const marker = app.querySelector('[data-count]');
-    if (marker) marker.textContent = `${count} הצבעות`;
+    if (marker) marker.textContent = count === 1 ? 'הצבעה אחת' : `${count} הצבעות`;
     const status = app.querySelector('[data-network]');
     if (status) status.textContent = simulate ? 'מצב תרגול' : networkMessage;
   }
@@ -179,15 +192,32 @@ function presenter() {
       autoTimer = setTimeout(beginVote, index === 6 ? 100 : 430);
     }
   };
-  function graph(round) {
+  function graph(round, animate = true) {
     if (!count) return '<p class="status">עדיין אין הצבעות לתחנה הזו.</p>';
     const counts = Array(round.options.length).fill(0);
     let reaction = 0;
-    for (const value of ballots.values()) { counts[value.choice]++; reaction += value.ms; }
-    return `<div class="distribution" aria-label="תוצאות ההצבעה">${round.options.map((option,i) => {
-      const percent = Math.round(counts[i]*100/count);
-      return `<div class="bar-row"><strong>${option}</strong><span>${percent}% · ${counts[i]}</span><div class="bar-track" aria-hidden="true"><div class="bar-fill" style="width:${percent}%"></div></div></div>`;
-    }).join('')}</div>${index===6?`<p class="status">זמן ממוצע מקבלת השאלה ועד ההצבעה באולם: <bdi>${Math.round(reaction/count).toLocaleString('he-IL')}</bdi> אלפיות שנייה.</p>`:''}`;
+    for (const value of ballots.values()) {
+      counts[value.choice]++;
+      reaction += value.ms;
+    }
+    const candies = '<i></i>'.repeat(24);
+    return `<div class="candy-results ${animate ? 'pour' : ''}">
+      <h2>תוצאות ההצבעה</h2>
+      <ul class="candy-chart" style="--columns:${counts.length}">${round.options.map((option, i) => {
+        const share = (counts[i] / count) * 100;
+        const percent = new Intl.NumberFormat('he-IL', {maximumFractionDigits: 1}).format(share);
+        const votes = counts[i] === 1 ? 'הצבעה אחת' : `${counts[i]} הצבעות`;
+        return `<li class="candy-column" style="--share:${share}%;--stagger:${i * 100}ms">
+          <div class="candy-jar" aria-hidden="true">
+            <div class="candy-fill"><div class="candy-bed">${candies}</div></div>
+          </div>
+          <div class="candy-label"><span class="letter" aria-hidden="true">${letters[i]}</span>
+            <strong>${option}</strong><bdi class="candy-percent">${percent}%</bdi><small>${votes}</small>
+          </div>
+        </li>`;
+      }).join('')}</ul>
+      ${index === 6 ? `<p class="status">זמן ממוצע מקבלת השאלה ועד ההצבעה באולם <bdi>${Math.round(reaction/count).toLocaleString('he-IL')}</bdi> אלפיות שנייה.</p>` : ''}
+    </div>`;
   }
   function render() {
     const round = rounds[index];
@@ -195,9 +225,9 @@ function presenter() {
     if (!round) {
       stage = `<div class="stage-finish"><div>${thankYou}</div><img src="./assets/hero.webp" alt=""></div>`;
     } else if (index === 0 && phase === 'vote') {
-      stage = `<div class="stage-intro"><div><p class="phase-label">תוכנית המחוננים בטכנודע</p><h1>ברוכים הבאים<br>לערב <em>הורים וילדים</em></h1><p class="stage-question">${round.question}</p><span class="count" data-count></span></div><div class="qr"><h2>סרקו והצטרפו</h2>${qr ? `<img src="${qr}" alt="קוד QR להצטרפות לחדר">` : ''}<p>קוד החדר <bdi class="code">${room || '…'}</bdi></p></div></div>`;
+      stage = `<div class="stage-intro"><div><p class="phase-label">תוכנית המחוננים בטכנודע</p><h1>ברוכים הבאים<br>לערב <em>הורים וילדים</em></h1><p class="stage-question">${round.question}</p><span class="count" data-count></span></div>${stationArt(0,'intro-art')}<div class="qr"><h2>סרקו והצטרפו</h2>${qr ? `<img src="${qr}" alt="קוד QR להצטרפות לחדר">` : ''}<p>קוד החדר <bdi class="code">${room || '…'}</bdi></p></div></div>`;
     } else {
-      stage = `${badge(round,index)}<h1>${round.title}</h1>`;
+      stage = `<div class="stage-heading"><div>${badge(round,index)}<h1>${round.title}</h1></div>${phase==='science' ? '' : stationArt(index,'stage-art')}</div>`;
       if (phase === 'task' || phase === 'vote') {
         stage += `<p class="stage-question">${phase==='task' ? round.prompt : round.question}</p>`;
         if (deadline) stage += `<span class="timer" data-timer="${index===6?'ms':'s'}" aria-label="זמן שנותר"></span>`;
@@ -207,15 +237,14 @@ function presenter() {
         if (round.answer) stage += `<p class="result">${round.answer}</p>${visual(index,true)}`;
         stage += `<section data-results>${graph(round)}</section>`;
       } else {
-        stage += research(round);
-        if (index === 0) stage = `<div class="stage-finish"><div>${stage}</div><img src="./assets/hero.webp" alt=""></div>`;
+        stage += research(round,index);
       }
     }
     const step = !round ? '' : phase === 'task' ? makeButton('advance','פותחים הצבעה ←','primary')
       : phase === 'vote' ? makeButton('advance','חושפים תוצאות ←','primary')
       : phase === 'reveal' ? makeButton('advance','מה המדע אומר? ←','primary')
       : makeButton('advance',index===7?'לסיום הערב ←':'לתחנה הבאה ←','primary');
-    app.innerHTML = `<div class="room-wrap"><section class="stage ${round?.color||'lilac'}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מצב הקרנה','quiet')}${phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && count>0)}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
+    app.innerHTML = `<div class="room-wrap"><section class="stage stage-${round ? phase : 'finish'} ${round?.color||'lilac'}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מצב הקרנה','quiet')}${phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && count>0)}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
     drawShapes(app, phase==='reveal');
     updateTimer();
     updateStats();
@@ -398,8 +427,8 @@ function demo() {
       currentTimer=Date.now()+1000*round.seconds;
     }
     const task = index && selected===undefined ? `<div class="stage ${round.color}"><p class="stage-question">${round.prompt}</p>${round.seconds && selected===undefined?'<div class="timer" data-timer="s" aria-label="זמן שנותר"></div>':''}${visual(index)}</div>` : '';
-    const reveal = selected!==undefined ? `${round.answer?`<p class="result">${round.answer}</p>${visual(index,true)}`:''}${research(round)}` : '';
-    app.innerHTML = `<div class="room-wrap solo"><section class="room-panel">${progress(index)}${badge(round,index)}<h1>${round.title}</h1>${task}<p class="question">${round.question}</p>${voteButtons(round,selected,selected!==undefined,selected!==undefined)}${reveal}<div class="demo-nav">${index?makeButton('previous','→ הקודמת'):''}${makeButton('next',index===7?'לסיום ←':'לתחנה הבאה ←','primary')}</div></section></div>`;
+    const reveal = selected!==undefined ? `${round.answer?`<p class="result">${round.answer}</p>${visual(index,true)}`:''}${research(round,index)}` : '';
+    app.innerHTML = `<div class="room-wrap solo"><section class="room-panel ${round.color}">${progress(index)}${badge(round,index)}<h1>${round.title}</h1>${task}<p class="question">${round.question}</p>${voteButtons(round,selected,selected!==undefined,selected!==undefined)}${reveal}<div class="demo-nav">${index?makeButton('previous','→ הקודמת'):''}${makeButton('next',index===7?'לסיום ←':'לתחנה הבאה ←','primary')}</div></section></div>`;
     drawShapes(app, selected!==undefined);
     updateTimer();
     syncSound();
