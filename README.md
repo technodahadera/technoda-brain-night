@@ -23,3 +23,7 @@
 - תצלום איילין קולינס מ־NASA באמצעות [scikit-image](https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut). תמונת הכתמים היא עיבוד של התצלום.
 - איור הפתיחה נוצר עבור האתר ב־ImageGen לפי בריף של מוח ורוד תלת־ממדי, קוביות וברק על רקע סגול.
 - רישיונות Rubik, PeerJS ו־QRCode Generator מצורפים בתיקיית `assets`.
+
+## קישור לאירוע
+
+[פתיחת האתר ב־GitHub Pages](https://technodahadera.github.io/technoda-brain-night/)
