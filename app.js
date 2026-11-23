@@ -1,6 +1,6 @@
 import {rounds} from './data.js';
 import {drawShapes, playSound, stopSound} from './media.js';
-import {hostTransport, joinTransport, normalizeCode} from './live.js';
+import {hostTransport, joinTransport, normalizeCode} from './live.js?v=2';
 
 const app = document.querySelector('#app');
 const query = new URLSearchParams(location.search);
