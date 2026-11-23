@@ -1,4 +1,4 @@
-import {rounds} from './data.js?v=4';
+import {rounds} from './data.js?v=6';
 import {drawShapes, playSound, stopSound} from './media.js';
 import {hostTransport, joinTransport, normalizeCode} from './live.js?v=5';
 
@@ -91,22 +91,21 @@ function visual(index, reveal = false) {
 }
 
 function research(round, index) {
-  const source = `<a href="${round.link}" target="_blank" rel="noopener noreferrer"><bdi>${round.ref}</bdi> ↗</a>`;
-  if (round.scienceVideo) {
-    return `<section class="science-card science-video-card" aria-labelledby="science-title">
-      <div class="science-copy">
-        <p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
-        <h2 id="science-title">${round.scienceTitle}</h2>
-        <video controls playsinline preload="metadata" aria-labelledby="science-title" src="${round.scienceVideo}"></video>
-        <details class="science-notes"><summary>תקציר ומקור המחקר</summary><p>${round.science}</p>${source}</details>
+  const media = round.scienceVideo
+    ? `<video controls playsinline preload="metadata" aria-labelledby="science-title" src="${round.scienceVideo}"></video>`
+    : stationArt(index, 'science-art');
+  return `<section class="science-card ${round.scienceVideo ? 'science-video-card' : ''}" aria-labelledby="science-title">
+    <div class="science-copy">
+      <p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
+      <h2 id="science-title">${round.scienceTitle}</h2>
+      <p>${round.science}</p>
+      <div class="science-source">
+        <b class="science-article" lang="en" dir="ltr">${round.articleTitle}</b>
+        <span class="science-author"><bdi>${round.ref}</bdi></span>
+        <a href="${round.link}" target="_blank" rel="noopener noreferrer">לקריאת המאמר <span aria-hidden="true">↗</span></a>
       </div>
-    </section>`;
-  }
-  return `<section class="science-card" aria-labelledby="science-title">
-    <div class="science-copy"><p class="science-label">מה המדע אומר על ילדים מחוננים?</p>
-      <h2 id="science-title">${round.scienceTitle}</h2><p>${round.science}</p>
-      ${source}
-    </div>${stationArt(index,'science-art')}
+    </div>
+    <div class="science-media">${media}</div>
   </section>`;
 }
 function voteButtons(round, selected, disabled, reveal = false) {

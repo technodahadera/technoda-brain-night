@@ -6,6 +6,7 @@ export const rounds = [
     scienceVideo: './assets/warmup-science.mp4',
     scienceTitle: 'רואים קשרים בין דברים',
     science: 'במחקר עם ילדים בני 7–8, ילדים מחוננים פתרו בממוצע יותר חידות שבהן צריך לגלות קשר בין צורות. ילדים בשתי הקבוצות השתפרו בעקבות רמזים מדורגים. שאלת החימום שלנו מזמינה לתאר איך החשיבה מרגישה לכם.',
+    articleTitle: 'Gifted and Average-Ability Children’s Potential for Solving Analogy Items',
     ref: 'Vogelaar, Sweijen & Resing (2019)', link: 'https://doi.org/10.3390/jintelligence7030019',
   },
   {
@@ -16,6 +17,7 @@ export const rounds = [
     answer: 'אם יצא לכם להגיד ״אדום״ במקום ״ירוק״, נפלתם במלכודת הסטרופ.',
     scienceTitle: 'כשהמילה קופצת לפני הצבע',
     science: 'במחקר עם ילדים בני 6–11, ילדים מחוננים עשו בממוצע פחות טעויות במבחן הסטרופ. ההבדל תלוי בסוג האתגר. גם כשקוראים מצוין, לעצור את הקריאה ולומר את צבע הדיו דורש שליטה בקשב.',
+    articleTitle: 'Development of Mental Attention in Gifted and Mainstream Children: The Role of Mental Capacity, Inhibition, and Speed of Processing',
     ref: 'Johnson, Im-Bolter & Pascual-Leone (2003)', link: 'https://doi.org/10.1046/j.1467-8624.2003.00626.x',
   },
   {
@@ -26,6 +28,7 @@ export const rounds = [
     answer: 'אפשרות ג׳',
     scienceTitle: 'לסובב צורה בתוך הראש',
     science: 'במחקר קטן, בני נוער מחוננים זיהו צורות מסובבות בדיוק רב יותר, בעיקר כשהסיבוב היה גדול. זמן התגובה הממוצע היה דומה בשתי הקבוצות. לכן בחידה הזאת כדאי לשים לב לדיוק, גם אם לקח לכם עוד רגע.',
+    articleTitle: 'The role of frontal and parietal cortex in the performance of gifted and average adolescents in a mental rotation task',
     ref: 'Anomal ואחרים (2020)', link: 'https://doi.org/10.1371/journal.pone.0232660',
   },
   {
@@ -36,6 +39,7 @@ export const rounds = [
     correct: 0, answer: 'יונתן הקטן + אחינו יעקב',
     scienceTitle: 'המוח שומע שמשהו השתנה',
     science: 'במחקר קטן בילדים מחוננים, שינוי בצליל עורר תגובה מוחית חזקה יותר, ובמדד אחד גם מוקדמת יותר. המחקר בדק צלילים בודדים. באתגר שלנו צריך להפריד בין שתי מנגינות, והיכרות עם השירים נותנת רמז חשוב.',
+    articleTitle: 'Neural mechanisms of auditory sensory processing in children with high intelligence',
     ref: 'Liu ואחרים (2007)', link: 'https://pubmed.ncbi.nlm.nih.gov/17885604/',
   },
   {
@@ -46,6 +50,7 @@ export const rounds = [
     answer: '5 אגורות', equation: '₪0.05 + ₪1.05 = ₪1.10',
     scienceTitle: 'לתפוס את עצמנו לפני שעונים',
     science: 'במחקר אחד, ילדים מחוננים פתרו בעיית חשיבה בפחות צעדים והפגינו יותר ידע על דרכי פתרון. בחידת המחבט והכדור אפשר לנסות דרך כזאת מיד. מציבים את התשובה הראשונה ובודקים אם הסכום באמת מסתדר.',
+    articleTitle: 'The relationship between metacognition and problem solving in gifted children',
     ref: 'Swanson (1992)', link: 'https://doi.org/10.1080/02783199209553457',
   },
   {
@@ -56,6 +61,7 @@ export const rounds = [
     answer: 'אלה פנים של אסטרונאוטית.',
     scienceTitle: 'כשהכתמים מתחברים לתמונה',
     science: 'במחקר על דמיון מרחבי נמצאו דרכי פתרון שונות גם בקרב ילדים מחוננים. בתמונת הכתמים שלנו, אפשר לזהות את הדמות ברגע או לחבר את הרמזים בהדרגה. המחקר עסק בדמיון מרחבי, וזיהוי הדמות כאן הוא אתגר נפרד.',
+    articleTitle: 'Profiling spatial imagination in exceptionally gifted pupils using mobile eye-tracking',
     ref: 'מחקר על דמיון מרחבי בילדים מחוננים (2026)', link: 'https://doi.org/10.1080/2331186X.2026.2637794',
   },
   {
@@ -66,6 +72,7 @@ export const rounds = [
     correct: 2, answer: 'נצנץ כוכב קטן',
     scienceTitle: 'מהירות עיבוד תלויה במשימה',
     science: 'במחקר עם ילדים בני 9–13, ילדים מחוננים ענו מהר יותר ובדיוק רב יותר בכמה משימות עיבוד מידע. בסקירת מחקרים נמצאו גם משימות שבהן לא היה הבדל במהירות. בשיר שלנו היכרות עם המנגינה וזריזות הלחיצה משפיעות גם הן על הזמן.',
+    articleTitle: 'Giftedness identification and cognitive, physiological and psychological characteristics of gifted children: a systematic review',
     ref: 'סקירת מחקרים על ילדים מחוננים (2024)', link: 'https://doi.org/10.3389/fpsyg.2024.1411981',
   },
   {
@@ -76,6 +83,7 @@ export const rounds = [
     correct: 0, answer: 'קפה וקצת שקט מול הטלוויזיה',
     scienceTitle: 'לשמור רמזים ולחבר סיפור',
     science: 'במחקר בילדים ובני נוער מחוננים נמצא יתרון במשימה שדרשה לעדכן מידע בזיכרון תוך כדי חשיבה. זו יכולת שימושית לבלשי הסאונד. מחזיקים בראש את הצליל הקודם, שומעים את הבא ומשנים את ההשערה לפי הרמז החדש.',
+    articleTitle: 'Two Attentional Processes Subserving Working Memory Differentiate Gifted and Mainstream Students',
     ref: 'Johnson, Howard & Pascual-Leone (2024)', link: 'https://doi.org/10.5334/joc.370',
   },
 ];
