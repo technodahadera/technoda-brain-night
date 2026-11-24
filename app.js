@@ -13,7 +13,7 @@ const stationArt = (index, className) =>
   `<img class="${className}" src="./assets/station-${index}.webp" alt="" decoding="async">`;
 const makeButton = (action, text, style = 'secondary', disabled = false) => `<button type="button" class="${style}" data-action="${action}" ${disabled ? 'disabled' : ''}>${text}</button>`;
 const progress = index => `<div class="round-progress" role="img" aria-label="שלב ${index+1} מתוך 8">${rounds.map((_,i) => `<i class="${i<index?'done':i===index?'now':''}"></i>`).join('')}</div>`;
-const footerArt = '<img src="./assets/hero.webp" alt="" class="tiny-art">';
+const footerArt = '<img src="./assets/brain-night-poster.webp" alt="" class="tiny-art">';
 const thankYou = '<h1>תודה שהצטרפתם למסע בתוך הראש שלהם!</h1><p>איזה רגע מהערב תרצו לספר עליו בבית?</p>';
 const kitchenSteps = ['פתיחת המקרר','הוצאת חלב','הפעלת קומקום','ערבוב בכוס','הדלקת הטלוויזיה'];
 let onSoundFinished;
@@ -112,14 +112,26 @@ function voteButtons(round, selected, disabled, reveal = false) {
   return `<div class="options">${round.options.map((text,i) => `<button type="button" class="choice ${selected===i?'selected':''} ${reveal&&round.correct===i?'correct':''}" data-action="vote:${i}" aria-pressed="${selected===i}" ${disabled?'disabled':''}><span class="letter" aria-hidden="true">${letters[i]}</span><span>${text}</span></button>`).join('')}</div>`;
 }
 
+function stationLinks(inHost = false) {
+  return rounds.slice(1).map((round, offset) => {
+    const index = offset + 1;
+    return `<a href="?view=demo&amp;round=${index}" class="station-card ${round.color}" ${inHost ? 'target="_blank" rel="noopener"' : ''}>
+      ${stationArt(index, 'station-card-art')}
+      <div class="station-card-copy"><strong>${round.title}</strong><small>${round.card}</small></div>
+    </a>`;
+  }).join('');
+}
+
 if (!view) {
-  document.querySelector('#station-list').innerHTML = rounds.slice(1).map((round,i) =>
-    `<a href="?view=demo&amp;round=${i+1}" class="station-card ${round.color}">${stationArt(i+1,'station-card-art')}<div class="station-card-copy"><strong>${round.title}</strong><small>${round.card}</small></div></a>`).join('');
+  document.querySelector('#station-list').innerHTML = stationLinks();
 } else {
   const mode = document.querySelector('#mode-link');
   mode.href = './';
   mode.textContent = 'לדף הבית ←';
-  if (view === 'host') presenter();
+  if (view === 'host') {
+    document.body.classList.add('host-page');
+    presenter();
+  }
   else if (view === 'play') participant();
   else if (view === 'demo') demo();
   else location.replace('./');
@@ -233,7 +245,7 @@ function presenter() {
     }
     const candies = '<i></i>'.repeat(24);
     return `<div class="candy-results ${animate ? 'pour' : ''}">
-      <h2>תוצאות ההצבעה</h2>
+      <div class="results-heading"><h2>תוצאות ההצבעה</h2><span>${count === 1 ? 'הצבעה אחת' : `${count} הצבעות`}</span></div>
       <ul class="candy-chart" style="--columns:${counts.length}">${round.options.map((option, i) => {
         const share = (counts[i] / count) * 100;
         const percent = new Intl.NumberFormat('he-IL', {maximumFractionDigits: 1}).format(share);
@@ -255,9 +267,29 @@ function presenter() {
     const round = rounds[index];
     let stage;
     if (!round) {
-      stage = `<div class="stage-finish"><div>${thankYou}</div><img src="./assets/hero.webp" alt=""></div>`;
+      stage = `<div class="stage-finish"><div>${thankYou}</div><img src="./assets/brain-night-poster.webp" alt=""></div>`;
     } else if (index === 0 && phase === 'vote') {
-      stage = `<div class="stage-intro"><div><p class="phase-label">תוכנית המחוננים בטכנודע</p><h1>ברוכים הבאים<br>לערב <em>הורים וילדים</em></h1><p class="stage-question">${round.question}</p><span class="count" data-count></span></div>${stationArt(0,'intro-art')}<div class="qr"><h2>סרקו והצטרפו</h2>${qr ? `<img src="${qr}" alt="קוד QR להצטרפות לחדר">` : ''}<p>קוד החדר <bdi class="code">${room || '…'}</bdi></p></div></div>`;
+      const joinPath = `?view=play&amp;room=${room}`;
+      stage = `<div class="stage-intro">
+        <div class="opening-copy">
+          <p class="phase-label">ערב מחצית · תוכנית המחוננים בטכנודע</p>
+          <h1>בתוך הראש <em>שלהם</em></h1>
+          <p class="opening-welcome">ברוכים הבאים לערב הורים וילדים</p>
+        </div>
+        <img class="opening-art" src="./assets/brain-night-poster.webp" alt="">
+        <div class="qr opening-join">
+          <h2>סרקו והצטרפו</h2>
+          ${qr ? `<a href="${joinPath}" target="_blank" rel="noopener" aria-label="פתיחת מסך ההצטרפות"><img src="${qr}" alt="קוד QR להצטרפות לחדר"></a>` : ''}
+          <p>קוד החדר <bdi class="code">${room || '…'}</bdi></p>
+          <span class="count" data-count></span>
+          <p class="warmup-label">שאלת חימום</p>
+          <p class="stage-question">${round.question}</p>
+        </div>
+      </div>
+      <section class="opening-challenges" aria-labelledby="opening-challenges-title">
+        <h2 id="opening-challenges-title">מה מחכה לנו?</h2>
+        <div class="station-list">${stationLinks(true)}</div>
+      </section>`;
     } else {
       stage = `<div class="stage-heading"><div>${badge(round,index)}<h1>${round.title}</h1></div>${phase==='science' ? '' : stationArt(index,'stage-art')}</div>`;
       if (phase === 'task' || phase === 'vote') {
@@ -279,7 +311,7 @@ function presenter() {
       : phase === 'vote' ? makeButton('advance','חושפים תוצאות ←','primary')
       : phase === 'reveal' ? makeButton('advance','מה המדע אומר? ←','primary')
       : makeButton('advance',index===7?'לסיום הערב ←':'לתחנה הבאה ←','primary');
-    app.innerHTML = `<div class="room-wrap"><section class="stage stage-${round ? phase : 'finish'} ${round?.color||'lilac'}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${!review && phase==='science' && completed.has(index) ? makeButton('review-current','תוצאות ההצבעה','secondary') : ''}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מצב הקרנה','quiet')}${!review && phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${!review ? makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && (count>0 || completed.size>0)) : ''}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" class="${completed.has(i) ? 'completed-round' : ''}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}${completed.has(i) ? ' <span aria-hidden="true">✓</span>' : ''}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
+    app.innerHTML = `<div class="room-wrap"><section class="stage stage-${round ? phase : 'finish'} ${round?.color||'lilac'} ${index === 0 && phase === 'vote' ? 'opening-stage' : ''}">${stage}</section><section class="host-control" aria-label="בקרת מנחה"><div class="control-row">${step}${!review && phase==='science' && completed.has(index) ? makeButton('review-current','תוצאות ההצבעה','secondary') : ''}${makeButton('copy','העתקת קישור למשפחות','secondary',!room)}${makeButton('screen','מסך מלא','quiet')}<a class="quiet" href="./">דף הבית</a>${!review && phase==='vote'?makeButton('sample','הדגמת הצבעה','quiet',!simulate):''}${!review ? makeButton('simulation',simulate?'סיום תרגול':'מצב תרגול','quiet',!simulate && (count>0 || completed.size>0)) : ''}</div><nav class="mini-nav" aria-label="מעבר תחנה">${['פתיחה',1,2,3,4,5,6,7,'סיום'].map((s,i)=>`<button type="button" data-action="round:${i}" class="${completed.has(i) ? 'completed-round' : ''}" ${i===index?'aria-current="step"':''} aria-label="${typeof s==='number'?`תחנה ${s}`:s}">${s}${completed.has(i) ? ' <span aria-hidden="true">✓</span>' : ''}</button>`).join('')}</nav><p class="status" data-network role="status"></p></section></div>`;
     drawShapes(app, phase==='reveal');
     updateTimer();
     updateStats();
