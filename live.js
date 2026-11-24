@@ -94,7 +94,7 @@ export function joinTransport(room, onStatus, onMessage) {
       if (closed) return;
       connected=true;
       missing=0;
-      onStatus('מחוברים לאולם',false);
+      onStatus(`מחוברים לחדר ${room}`,false);
       onMessage({kind:'state',...state});
     } catch (error) {
       if (closed) return;
